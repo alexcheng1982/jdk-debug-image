@@ -35,6 +35,9 @@ WORKDIR /usr/src/openjdk8
 
 RUN git checkout ${JDK8_TAG}
 
+# Disable check in ResourceMark to avoid abort
+RUN sed -i '62,63s/^/\/\/ /' hotspot/src/share/vm/memory/resourceArea.hpp
+
 RUN FREETYPE2_LIB=$(pkg-config --variable=libdir freetype2) && \
     FREETYPE2_INCLUDE=$(pkg-config --variable=includedir freetype2) && \
     echo "FREETYPE2_LIB=$FREETYPE2_LIB" >> /etc/environment && \
@@ -48,6 +51,7 @@ RUN bash configure \
     --with-boot-jdk=/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture) \
     --with-native-debug-symbols=external \
     --with-debug-level=slowdebug \
+    --disable-zip-debug-info \
     --with-extra-cflags='-Wno-error' \
     --with-extra-cxxflags='-Wno-error'
 
