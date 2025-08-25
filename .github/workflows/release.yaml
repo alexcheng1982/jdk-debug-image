@@ -37,8 +37,7 @@ jobs:
           tags: alexcheng/jdk-debug:latest,alexcheng/jdk-debug:${{ github.event.release.name }}
           context: .
           file: ./Dockerfile-jdk8
-          build-args:
-            - JDK8_TAG=${{ github.event.release.name }}
+          build-args: JDK8_TAG=${{ github.event.release.name }}
           platforms: linux/amd64, linux/arm64
           provenance: true
           sbom: true
@@ -49,4 +48,4 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: alexcheng/jdk-debug
-          short-description: JDK with debug info and utils.
+          short-description: JDK with debug info and utils
