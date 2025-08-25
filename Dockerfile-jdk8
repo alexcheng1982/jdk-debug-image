@@ -1,0 +1,79 @@
+ARG UBUNTU_VERSION=24.04
+ARG JDK8_TAG=jdk8u462-ga
+
+FROM ubuntu:${UBUNTU_VERSION} AS builder
+
+RUN apt-get update && apt-get install -y \
+    autoconf \
+    binutils \
+    build-essential \
+    ccache \
+    file \
+    gdb \
+    git \
+    libasound2-dev \
+    libcups2-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libx11-dev \
+    libxext-dev \
+    libxrender-dev \
+    libxt-dev \
+    libxtst-dev \
+    openjdk-8-jdk \
+    python3 \
+    unzip \
+    wget \
+    zip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src
+
+RUN git clone https://github.com/openjdk/jdk8u.git openjdk8
+
+WORKDIR /usr/src/openjdk8
+
+RUN git checkout ${JDK8_TAG}
+
+RUN FREETYPE2_LIB=$(pkg-config --variable=libdir freetype2) && \
+    FREETYPE2_INCLUDE=$(pkg-config --variable=includedir freetype2) && \
+    echo "FREETYPE2_LIB=$FREETYPE2_LIB" >> /etc/environment && \
+    echo "FREETYPE2_INCLUDE=$FREETYPE2_INCLUDE" >> /etc/environment
+
+RUN bash configure \
+    --with-freetype-include=${FREETYPE2_LIB} \
+    --with-freetype-lib=${FREETYPE2_INCLUDE} \
+    --with-target-bits=64 \
+    --with-jobs=2 \
+    --with-boot-jdk=/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture) \
+    --with-native-debug-symbols=external \
+    --with-debug-level=slowdebug \
+    --with-extra-cflags='-Wno-error' \
+    --with-extra-cxxflags='-Wno-error'
+
+RUN make images
+
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+        amd64)   GNU_ARCH="x86_64" ;; \
+        arm64)   GNU_ARCH="aarch64" ;; \
+        ppc64el) GNU_ARCH="powerpc64le" ;; \
+        s390x)   GNU_ARCH="s390x" ;; \
+        *)       GNU_ARCH="$ARCH" ;; \
+    esac && \
+    mkdir /output && \
+    cp -r build/linux-${GNU_ARCH}-normal-server-slowdebug/jdk/ /output/
+
+FROM ubuntu:${UBUNTU_VERSION}
+
+LABEL maintainer="Fu Cheng <alexcheng1982@gmail.com>"
+
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+RUN apt-get update && apt-get install -y \
+    binutils \
+    gdb \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /output/jdk $JAVA_HOME
