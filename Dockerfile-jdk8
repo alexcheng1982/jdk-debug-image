@@ -36,7 +36,7 @@ WORKDIR /usr/src/openjdk8
 RUN git checkout ${JDK8_TAG}
 
 # Disable assertion
-RUN sed -i '/#define assert(/,/while (0)/c#define assert(p, msg) do { } while (0)' hotspot/src/share/vm/utilities/debug.hpp
+RUN sed -i '/#define assert(p, msg)/,/while (0)/c#define assert(p, msg) do { } while (0)\n' hotspot/src/share/vm/utilities/debug.hpp
 
 RUN FREETYPE2_LIB=$(pkg-config --variable=libdir freetype2) && \
     FREETYPE2_INCLUDE=$(pkg-config --variable=includedir freetype2) && \
